@@ -1,0 +1,44 @@
+{
+    "author": "Louis Jonget",
+    "dependencies": {},
+    "keywords": [],
+    "name": "day-night-bt",
+    "pebble": {
+        "displayName": "Day and Night Earth improved Watchface",
+        "enableMultiJS": true,
+        "messageKeys": [],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/WORLD_MONO",
+                    "name": "WORLD_MONO",
+                    "targetPlatforms": null,
+                    "type": "pbi"
+                },
+                {
+                    "file": "images/BT_ko_icon.png",
+                    "name": "BT_ko_icon",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/menu_icon.png",
+                    "menuIcon": true,
+                    "name": "IMAGE_MENU_ICON",
+                    "targetPlatforms": null,
+                    "type": "png"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "diorite"
+        ],
+        "uuid": "892e12bc-7a3e-411c-ba97-daa492f91088",
+        "watchapp": {
+            "watchface": true
+        }
+    },
+    "version": "2.1.0"
+}

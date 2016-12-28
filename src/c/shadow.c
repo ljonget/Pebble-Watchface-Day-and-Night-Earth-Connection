@@ -2,36 +2,30 @@
 #include "config.h"
 
 #define STR_SIZE 20
-#define TIME_OFFSET_PERSIST 1
-#define REDRAW_INTERVAL 15
+#define REDRAW_INTERVAL 1
 #define WIDTH 144
 #define HEIGHT 72
 
 static Window *window;
 static TextLayer *time_text_layer;
 static TextLayer *date_text_layer;
-#ifdef PBL_BW
+
 static GBitmap *world_bitmap;
-#else
-static GBitmap *three_worlds;
-#endif
+
 static Layer *canvas;
 static GBitmap *image;
 static int redraw_counter;
+// BT connection icon declare
+static BitmapLayer *s_world_layer, *s_bt_icon_layer;
+static GBitmap *s_world_bitmap, *s_bt_icon_bitmap;
 // s is set to memory of size STR_SIZE, and temporarily stores strings
 char *s;
-#ifdef PBL_SDK_2
-// Local time is wall time, not UTC, so an offset is used to get UTC
-int time_offset;
-#endif
+
 
 static void draw_earth() {
   // ##### calculate the time
-#ifdef PBL_SDK_2
-  int now = (int)time(NULL) + time_offset;
-#else
   int now = (int)time(NULL);
-#endif
+
   float day_of_year; // value from 0 to 1 of progress through a year
   float time_of_day; // value from 0 to 1 of progress through a day
   // approx number of leap years since epoch
@@ -58,23 +52,15 @@ static void draw_earth() {
       // spherical law of cosines
       float angle = ((float)sin_lookup(sun_y)/(float)TRIG_MAX_RATIO) * ((float)sin_lookup(y_angle)/(float)TRIG_MAX_RATIO);
       angle = angle + ((float)cos_lookup(sun_y)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(y_angle)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(sun_x - x_angle)/(float)TRIG_MAX_RATIO);
-#ifdef PBL_BW
       int byte = y * gbitmap_get_bytes_per_row(image) + (int)(x / 8);
-      if ((angle < 0) ^ (0x1 & (((char *)gbitmap_get_data(world_bitmap))[byte] >> (x % 8)))) {
+      //if ((angle < 0) ^ (0x1 & (((char *)gbitmap_get_data(world_bitmap))[byte] >> (x % 8)))) {
+      if ( (angle < 0) ^ (0x1 & (((char *)gbitmap_get_data(world_bitmap))[byte] >> (x % 8)))) {
         // white pixel
         ((char *)gbitmap_get_data(image))[byte] = ((char *)gbitmap_get_data(image))[byte] | (0x1 << (x % 8));
-      } else {
+     } else {
         // black pixel
         ((char *)gbitmap_get_data(image))[byte] = ((char *)gbitmap_get_data(image))[byte] & ~(0x1 << (x % 8));
       }
-#else
-      int byte = y * gbitmap_get_bytes_per_row(three_worlds) + x;
-      if (angle < 0) { // dark pixel
-        ((char *)gbitmap_get_data(three_worlds))[byte] = ((char *)gbitmap_get_data(three_worlds))[WIDTH*HEIGHT + byte];
-      } else { // light pixel
-        ((char *)gbitmap_get_data(three_worlds))[byte] = ((char *)gbitmap_get_data(three_worlds))[WIDTH*HEIGHT*2 + byte];
-      }
-#endif
     }
   }
   layer_mark_dirty(canvas);
@@ -108,23 +94,16 @@ static void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
   }
 }
 
-#ifdef PBL_SDK_2
-// Get the time from the phone, which is probably UTC
-// Calculate and store the offset when compared to the local clock
-static void app_message_inbox_received(DictionaryIterator *iterator, void *context) {
-  Tuple *t = dict_find(iterator, 0);
-  int unixtime = t->value->int32;
-  int now = (int)time(NULL);
-  time_offset = unixtime - now;
-  status_t s = persist_write_int(TIME_OFFSET_PERSIST, time_offset); 
-  if (s) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Saved time offset %d with status %d", time_offset, (int) s);
-  } else {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Failed to save time offset with status %d", (int) s);
+
+static void bluetooth_callback(bool connected) {
+  // Show ko icon if disconnected
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
+
+  if(!connected) {
+    // Issue a vibrating alert
+    vibes_double_pulse();
   }
-  draw_earth();
 }
-#endif
 
 static void window_load(Window *window) {
 #ifdef BLACK_ON_WHITE
@@ -157,12 +136,32 @@ static void window_load(Window *window) {
   canvas = layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
   layer_set_update_proc(canvas, draw_watch);
   layer_add_child(window_layer, canvas);
-#ifdef PBL_BW
+
   image = gbitmap_create_blank(GSize(WIDTH, HEIGHT), GBitmapFormat1Bit);
-#else
-  image = gbitmap_create_as_sub_bitmap(three_worlds, GRect(0, 0, WIDTH, HEIGHT));
-#endif
+
   draw_earth();
+  //----------------
+  
+  // Create the worldmap
+  //s_world_bitmap = gbitmap_create_with_resource(RESOURCE_ID_WORLD_MONO );
+  
+  // Create the BitmapLayer to display the GBitmap
+ // s_world_layer = bitmap_layer_create(GRect( 0, 0, 144, 72));
+  //bitmap_layer_set_bitmap(s_world_layer, s_world_bitmap);
+  //layer_add_child(window_layer, bitmap_layer_get_layer(s_world_layer));
+  
+  //----------------
+  
+  // Create the Bluetooth icon GBitmap
+  s_bt_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT_ko_icon );
+  
+  // Create the BitmapLayer to display the GBitmap
+  s_bt_icon_layer = bitmap_layer_create(GRect( 3, 143, 14, 22));
+  bitmap_layer_set_bitmap(s_bt_icon_layer, s_bt_icon_bitmap);
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_bt_icon_layer));
+  
+  // Show the correct state of the BT connection from the start
+  bluetooth_callback(connection_service_peek_pebble_app_connection());
 }
 
 static void window_unload(Window *window) {
@@ -170,25 +169,15 @@ static void window_unload(Window *window) {
   text_layer_destroy(date_text_layer);
   layer_destroy(canvas);
   gbitmap_destroy(image);
+  gbitmap_destroy(s_bt_icon_bitmap);
+  bitmap_layer_destroy(s_bt_icon_layer);
 }
 
 static void init(void) {
   redraw_counter = 0;
 
-#ifdef PBL_SDK_2
-  // Load the UTC offset, if it exists
-  time_offset = 0;
-  if (persist_exists(TIME_OFFSET_PERSIST)) {
-    time_offset = persist_read_int(TIME_OFFSET_PERSIST);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "loaded offset %d", time_offset);
-  }
-#endif
 
-#ifdef PBL_BW
-  world_bitmap = gbitmap_create_with_resource(RESOURCE_ID_WORLD);
-#else
-  three_worlds = gbitmap_create_with_resource(RESOURCE_ID_THREE_WORLDS);
-#endif
+  world_bitmap = gbitmap_create_with_resource(RESOURCE_ID_WORLD_MONO);
 
   window = window_create();
   window_set_window_handlers(window, (WindowHandlers) {
@@ -202,21 +191,18 @@ static void init(void) {
   s = malloc(STR_SIZE);
   tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 
-#ifdef PBL_SDK_2
-  app_message_register_inbox_received(app_message_inbox_received);
-  app_message_open(30, 0);
-#endif
+  // Register for Bluetooth connection updates
+  connection_service_subscribe((ConnectionHandlers) {
+    .pebble_app_connection_handler = bluetooth_callback
+  });  
 }
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
   free(s);
   window_destroy(window);
-#ifdef PBL_BW
   gbitmap_destroy(world_bitmap);
-#else
-  gbitmap_destroy(three_worlds);
-#endif
+
 }
 
 int main(void) {
