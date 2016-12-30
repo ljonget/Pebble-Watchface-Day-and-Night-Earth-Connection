@@ -112,10 +112,10 @@ static void battery_callback(BatteryChargeState state) {
   s_battery_level = state.charge_percent;
   
  // display icon and vibrate if low battery
-  if( s_battery_level < 11 ) {
+  if( s_battery_level < 11 && !low_battery && !state.is_charging ) {
     vibes_double_pulse();
     low_battery = true;
-  }else{
+  }else if (state.is_charging) {
     low_battery = false;
   }
   layer_set_hidden(bitmap_layer_get_layer(s_battery_icon_layer), !low_battery);
