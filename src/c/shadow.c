@@ -177,6 +177,8 @@ static void window_load(Window *window) {
   bitmap_layer_set_bitmap(s_bt_icon_layer, s_bt_icon_bitmap);
   layer_add_child(window_layer, bitmap_layer_get_layer(s_bt_icon_layer));
   
+  // show correct state of battery from start
+  battery_callback(battery_state_service_peek());
   // Show the correct state of the BT connection from the start
   bluetooth_callback(connection_service_peek_pebble_app_connection());
 }
@@ -208,6 +210,9 @@ static void init(void) {
   s = malloc(STR_SIZE);
   tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 
+  // Subscribe to battery info
+  battery_state_service_subscribe(battery_callback);
+  
   // Register for Bluetooth connection updates
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = bluetooth_callback
