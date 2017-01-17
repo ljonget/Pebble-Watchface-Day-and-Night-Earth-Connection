@@ -11,6 +11,13 @@
         "resources": {
             "media": [
                 {
+                    "file": "images/menu_icon.png",
+                    "menuIcon": true,
+                    "name": "IMAGE_MENU_ICON",
+                    "targetPlatforms": null,
+                    "type": "png"
+                },
+                {
                     "file": "images/WORLD_MONO",
                     "name": "WORLD_MONO",
                     "targetPlatforms": null,
@@ -23,11 +30,10 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/menu_icon.png",
-                    "menuIcon": true,
-                    "name": "IMAGE_MENU_ICON",
+                    "file": "images/BATTERY",
+                    "name": "BATTERY",
                     "targetPlatforms": null,
-                    "type": "png"
+                    "type": "bitmap"
                 }
             ]
         },
