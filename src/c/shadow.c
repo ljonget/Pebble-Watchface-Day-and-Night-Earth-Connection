@@ -19,6 +19,7 @@ static int redraw_counter;
 static BitmapLayer *s_battery_icon_layer, *s_bt_icon_layer;
 static GBitmap *s_battery_icon_bitmap, *s_bt_icon_bitmap;
 static bool low_battery;
+static int s_battery_level;
 // s is set to memory of size STR_SIZE, and temporarily stores strings
 char *s;
 
@@ -100,14 +101,22 @@ static void bluetooth_callback(bool connected) {
   // Show ko icon if disconnected
   layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
 
-  if(!connected) {
+  if(!connected && !quiet_time_is_active ()) {
     // Issue a vibrating alert
     vibes_double_pulse();
   }
 }
 
 static void battery_callback(BatteryChargeState state) {
- // display icon if low battery
+  // Record the new battery level
+  s_battery_level = state.charge_percent;
+  
+  // display icon if low battery
+  if( s_battery_level < 11 && !low_battery && !state.is_charging ) {
+    low_battery = true;
+  }else if (state.is_charging) {
+    low_battery = false;
+  }
   layer_set_hidden(bitmap_layer_get_layer(s_battery_icon_layer), !low_battery);
 
 }
