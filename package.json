@@ -11,6 +11,12 @@
         "resources": {
             "media": [
                 {
+                    "file": "images/BATTERY",
+                    "name": "BATTERY",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
                     "file": "images/WORLD_MONO",
                     "name": "WORLD_MONO",
                     "targetPlatforms": null,
