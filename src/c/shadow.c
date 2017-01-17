@@ -102,7 +102,7 @@ static void bluetooth_callback(bool connected) {
   // Show ko icon if disconnected
   layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
 
-  if(!connected) {
+  if(!connected && !quiet_time_is_active ()) {
     // Issue a vibrating alert
     vibes_double_pulse();
   }
