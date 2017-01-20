@@ -15,7 +15,6 @@ static GBitmap *world_bitmap;
 static Layer *canvas;
 static GBitmap *image;
 static int redraw_counter;
-
 // BT connection & Battery icon declare
 static BitmapLayer *s_battery_icon_layer, *s_bt_icon_layer;
 static GBitmap *s_battery_icon_bitmap, *s_bt_icon_bitmap;
@@ -112,8 +111,9 @@ static void battery_callback(BatteryChargeState state) {
   // Record the new battery level
   s_battery_level = state.charge_percent;
   
-  // display icon if low battery
+ // display icon and vibrate if low battery
   if( s_battery_level < 11 && !low_battery && !state.is_charging ) {
+    vibes_double_pulse();
     low_battery = true;
   }else if (state.is_charging) {
     low_battery = false;
@@ -159,13 +159,13 @@ static void window_load(Window *window) {
   draw_earth();
   //----------------
   
-  // Create the worldmap
-  //s_world_bitmap = gbitmap_create_with_resource(RESOURCE_ID_WORLD_MONO );
+  // Create the Battery icon GBitmap
+  s_battery_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BATTERY );
   
   // Create the BitmapLayer to display the GBitmap
- // s_world_layer = bitmap_layer_create(GRect( 0, 0, 144, 72));
-  //bitmap_layer_set_bitmap(s_world_layer, s_world_bitmap);
-  //layer_add_child(window_layer, bitmap_layer_get_layer(s_world_layer));
+  s_battery_icon_layer = bitmap_layer_create(GRect( 127, 143, 14, 22));
+  bitmap_layer_set_bitmap(s_battery_icon_layer, s_battery_icon_bitmap);
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_battery_icon_layer));
   
   //----------------
   
@@ -190,6 +190,8 @@ static void window_unload(Window *window) {
   gbitmap_destroy(image);
   gbitmap_destroy(s_bt_icon_bitmap);
   bitmap_layer_destroy(s_bt_icon_layer);
+  gbitmap_destroy(s_battery_icon_bitmap);
+  bitmap_layer_destroy(s_battery_icon_layer);
 }
 
 static void init(void) {
@@ -209,7 +211,7 @@ static void init(void) {
 
   s = malloc(STR_SIZE);
   tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
-
+  
   // Subscribe to battery info
   battery_state_service_subscribe(battery_callback);
   
